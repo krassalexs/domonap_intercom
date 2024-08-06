@@ -12,6 +12,7 @@ class IntercomAPI:
         self.headers = {
             "Content-Type": "application/json"
         }
+        self.token_update_callback = None
 
     def set_tokens(self, access_token, refresh_token, refresh_expiration_date):
         self.access_token = access_token
@@ -59,6 +60,10 @@ class IntercomAPI:
                         data["completeToken"]["refreshToken"],
                         data["completeToken"]["refreshExpirationDate"]
                     )
+                    if self.token_update_callback:
+                        self.token_update_callback(data["completeToken"]["accessToken"],
+                                                   data["completeToken"]["refreshToken"],
+                                                   data["completeToken"]["refreshExpirationDate"])
                 return await response.json()
 
     async def update_token(self):
@@ -77,6 +82,10 @@ class IntercomAPI:
                         data["refreshToken"],
                         data["refreshExpirationDate"]
                     )
+                    if self.token_update_callback:
+                        self.token_update_callback(data["accessToken"],
+                                                   data["refreshToken"],
+                                                   data["refreshExpirationDate"])
                     return {
                         "access_token": data["accessToken"],
                         "refresh_token": data["refreshToken"],
