@@ -1,0 +1,349 @@
+{
+	"info": {
+		"_postman_id": "e165e387-7ab6-4d25-9627-59dc98ae7959",
+		"name": "Intercom Lovit",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "2586846"
+	},
+	"item": [
+		{
+			"name": "Authorize",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"phoneNumber\": {\n    \"countryCode\": 7,\n    \"number\": {{phoneNumber}}\n  }\n}"
+				},
+				"url": {
+					"raw": "https://prod-api.lovit.ru/sso-api/Authorization/Authorize",
+					"protocol": "https",
+					"host": [
+						"prod-api",
+						"lovit",
+						"ru"
+					],
+					"path": [
+						"sso-api",
+						"Authorization",
+						"Authorize"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "ConfirmAuthorization",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let responseData = pm.response.json();",
+							"",
+							"pm.globals.set(\"accessToken\", \"Bearer \" + responseData.completeToken.accessToken);",
+							"pm.globals.set(\"refreshToken\", responseData.completeToken.refreshToken);",
+							"pm.globals.set(\"refreshExpirationDate\", responseData.completeToken.refreshExpirationDate);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "authorization",
+						"value": "{{accessToken}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"phoneNumber\": {\n    \"countryCode\": 7,\n    \"number\": {{phoneNumber}}\n  },\n  \"confirmCode\": \"{{confirmCode}}\",\n  \"deviceToken\": \"home-assistant\"\n}"
+				},
+				"url": {
+					"raw": "https://prod-api.lovit.ru/sso-api/Authorization/ConfirmAuthorization",
+					"protocol": "https",
+					"host": [
+						"prod-api",
+						"lovit",
+						"ru"
+					],
+					"path": [
+						"sso-api",
+						"Authorization",
+						"ConfirmAuthorization"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetUser",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "authorization",
+						"value": "{{accessToken}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "https://prod-api.lovit.ru/sso-api/User/GetUser",
+					"protocol": "https",
+					"host": [
+						"prod-api",
+						"lovit",
+						"ru"
+					],
+					"path": [
+						"sso-api",
+						"User",
+						"GetUser"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetPagedKeys",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "authorization",
+						"value": "{{accessToken}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"PerPage\": 100,\n  \"CurrentPage\": 1\n}\n\n\n"
+				},
+				"url": {
+					"raw": "https://prod-api.lovit.ru/client-api/Key/GetPagedKeysByKeysType",
+					"protocol": "https",
+					"host": [
+						"prod-api",
+						"lovit",
+						"ru"
+					],
+					"path": [
+						"client-api",
+						"Key",
+						"GetPagedKeysByKeysType"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetUserKey",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "authorization",
+						"value": "{{accessToken}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"keyId\": \"66ab67682474b7b320936dc9\"\n}"
+				},
+				"url": {
+					"raw": "https://prod-api.lovit.ru/client-api/Key/GetUserKey",
+					"protocol": "https",
+					"host": [
+						"prod-api",
+						"lovit",
+						"ru"
+					],
+					"path": [
+						"client-api",
+						"Key",
+						"GetUserKey"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "OpenRelayByDoorId",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "authorization",
+						"value": "{{accessToken}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"doorId\": \"{{doorId}}\"\n}"
+				},
+				"url": {
+					"raw": "https://prod-api.lovit.ru/client-api/Device/OpenRelayByDoorId",
+					"protocol": "https",
+					"host": [
+						"prod-api",
+						"lovit",
+						"ru"
+					],
+					"path": [
+						"client-api",
+						"Device",
+						"OpenRelayByDoorId"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refreshToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refreshExpirationDate",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "phoneNumber",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "confirmCode",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "doorId",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

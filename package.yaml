@@ -1,0 +1,20 @@
+author:
+  email: svmironov@users.noreply.github.com
+  homepage: https://github.com/svmironov/domonap_intercom
+  name: svmironov
+description: Domonap intercom component
+files:
+  - custom_components/domonap/__init__.py
+  - custom_components/domonap/api.py
+  - custom_components/domonap/consts.py
+  - custom_components/domonap/config_flow.py
+  - custom_components/domonap/button.py
+keywords:
+  - domonap
+  - intercom
+  - homeassistant
+  - home-assistant
+  - custom-component
+  - python
+license: MIT License
+name: Domonap

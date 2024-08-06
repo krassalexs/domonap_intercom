@@ -1,0 +1,25 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Устройство уже настроено"
+    },
+    "error": {
+      "confirmation_failed": "Ошибка подтверждения",
+      "authorization_failed": "Ошибка аутентификации",
+      "unknown": "Неизвестная ошибка"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "country_code": "Код страны",
+          "phone_number": "Номер телефона"
+        }
+      },
+      "confirm": {
+        "data": {
+          "confirm_code": "Код подтверждения"
+        }
+      }
+    }
+  }
+}
