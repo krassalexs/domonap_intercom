@@ -48,7 +48,7 @@ class IntercomFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "confirmation_failed"
             else:
                 return self.async_create_entry(
-                    title=self._phone_number,
+                    title= "+" + self._country_code + " " + self._phone_number,
                     data={
                         PARAM_ACCESS_TOKEN: self._api.access_token,
                         PARAM_REFRESH_TOKEN: self._api.refresh_token,
