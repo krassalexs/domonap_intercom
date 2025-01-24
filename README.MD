@@ -1,6 +1,8 @@
 # Domonap Home Assistant Integration
 
-Интеграция позволяет управлять устройствами привязанными к приложению Domonap (Аналог ПИК Домофон) из Home Assistant
+![Logo](https://github.com/svmironov/domonap_intercom/blob/main/img/icon.png?raw=true)
+
+Интеграция позволяет управлять устройствами привязанными к приложению Domonap (альтернатиный провайдер домофона в домах ПИК) из Home Assistant
 
 ## Возможности
 
