@@ -1,3 +1,4 @@
+import aiohttp
 import logging
 from homeassistant.components.camera import (
     Camera,
@@ -8,6 +9,7 @@ from homeassistant.components.camera import (
 from .const import DOMAIN, API
 
 _LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     entities = []
@@ -28,13 +30,13 @@ class IntercomCamera(Camera):
     _attr_frontend_stream_type = StreamType.HLS
     _attr_motion_detection_enabled = False
 
-    def __init__(self, api, key_id: str, name: str, stream_url: str, image_url: str):
+    def __init__(self, api, key_id: str, name: str, stream_url: str, snapshot_url: str):
         super().__init__()
         self._api = api
         self._key_id = key_id
         self._name = name
         self._stream_url = stream_url
-        self._image_url = image_url
+        self._snapshot_url = snapshot_url
 
     @property
     def unique_id(self):
@@ -44,8 +46,19 @@ class IntercomCamera(Camera):
     def name(self):
         return "Camera"
 
-    async def async_camera_image(self, **kwargs):
-        return self._image_url
+    async def async_camera_image(self, width=None, height=None):
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(self._snapshot_url) as response:
+                    if response.status == 200:
+                        _LOGGER.debug(f"Successfully fetched snapshot for {self._name}")
+                        return await response.read()
+                    else:
+                        _LOGGER.error(f"Failed to fetch snapshot, HTTP {response.status}")
+                        return None
+        except Exception as e:
+            _LOGGER.error(f"Error fetching snapshot from {self._snapshot_url}: {e}")
+            return None
 
     async def stream_source(self):
         return self._stream_url
@@ -63,7 +76,6 @@ class IntercomCamera(Camera):
             "model": "Intercom Device",
             "via_device": (DOMAIN, self._key_id),
         }
-
 
     async def async_update(self):
         _LOGGER.debug(f"Updating camera: {self._name}")
