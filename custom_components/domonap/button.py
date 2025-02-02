@@ -9,11 +9,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     entities = []
     api = hass.data[DOMAIN][API]
     response = await api.get_paged_keys()
-    doors = response.get("results", [])
-    for door in doors:
-        key_id = door["id"]
-        door_id = door["doorId"]
-        door_name = door["name"]
+    keys = response.get("results", [])
+    for key in keys:
+        key_id = key["id"]
+        door_id = key["doorId"]
+        door_name = key["name"]
         entities.append(IntercomDoor(api, key_id, door_id, door_name))
 
     async_add_entities(entities, True)
@@ -49,7 +49,7 @@ class IntercomDoor(ButtonEntity):
 
     async def async_press(self):
         try:
-            response = await self._api.open_relay_by_door_id(self._door_id)  # Ensure this is awaited
+            response = await self._api.open_relay_by_key_id(self._key_id)  # Ensure this is awaited
             if response.get('status') is not True:
                 _LOGGER.error(f"Failed to open the door {self._name}. Response: {response}")
         except Exception as e:

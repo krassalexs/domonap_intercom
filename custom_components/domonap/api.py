@@ -141,3 +141,15 @@ class IntercomAPI:
         async with aiohttp.ClientSession(headers=self.headers) as session:
             async with session.post(url, json=payload, ssl=False) as response:
                 return True
+
+    async def open_relay_by_key_id(self, key_id):
+        self.check_token_expiration()
+        if not self.access_token:
+            return {"error": "No access token available"}
+        url = f"{self.base_url}/client-api/Device/OpenRelayByKeyId"
+        payload = {
+            "keyId": key_id
+        }
+        async with aiohttp.ClientSession(headers=self.headers) as session:
+            async with session.post(url, json=payload, ssl=False) as response:
+                return True

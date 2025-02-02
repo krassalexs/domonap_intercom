@@ -15,12 +15,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     entities = []
     api = hass.data[DOMAIN][API]
     response = await api.get_paged_keys()
-    doors = response.get("results", [])
-    for door in doors:
-        key_id = door["id"]
-        key = await api.get_user_key(key_id)
-        if key["videoUrl"] is not None:
-            entities.append(IntercomCamera(api, key_id, door["name"], key["httpVideoUrl"], key["videoPreview"]))
+    keys = response.get("results", [])
+    for key in keys:
+        key_id = key["id"]
+        if key["httpVideoUrl"] is not None:
+            entities.append(IntercomCamera(api, key_id, key["name"], key["httpVideoUrl"], key["videoPreview"]))
 
     async_add_entities(entities, True)
 
