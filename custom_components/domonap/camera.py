@@ -20,7 +20,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         key_id = door["id"]
         key = await api.get_user_key(key_id)
         if key["videoUrl"] is not None:
-            entities.append(IntercomCamera(api, key_id, door["name"], key["videoUrl"], key["videoPreview"]))
+            entities.append(IntercomCamera(api, key_id, door["name"], key["httpVideoUrl"], key["videoPreview"]))
 
     async_add_entities(entities, True)
 
