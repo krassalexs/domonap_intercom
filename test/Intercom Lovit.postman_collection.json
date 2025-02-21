@@ -102,13 +102,17 @@
 			"response": []
 		},
 		{
-			"name": "GetUser",
+			"name": "RefreshToken",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							""
+							"let responseData = pm.response.json();",
+							"",
+							"pm.collectionVariables.set(\"accessToken\", \"Bearer \" + responseData.accessToken);",
+							"pm.collectionVariables.set(\"refreshToken\", responseData.refreshToken);",
+							"pm.collectionVariables.set(\"refreshExpirationDate\", responseData.refreshExpirationDate);"
 						],
 						"type": "text/javascript"
 					}
@@ -130,7 +134,56 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": ""
+					"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+				},
+				"url": {
+					"raw": "https://prod-api.lovit.ru/sso-api/Authorization/RefreshToken",
+					"protocol": "https",
+					"host": [
+						"prod-api",
+						"lovit",
+						"ru"
+					],
+					"path": [
+						"sso-api",
+						"Authorization",
+						"RefreshToken"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetUser",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "authorization",
+						"value": "{{accessToken}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": []
 				},
 				"url": {
 					"raw": "https://prod-api.lovit.ru/sso-api/User/GetUser",
@@ -246,7 +299,7 @@
 			"response": []
 		},
 		{
-			"name": "OpenRelayByDoorId",
+			"name": "OpenRelayByKeyId",
 			"event": [
 				{
 					"listen": "test",
@@ -254,7 +307,8 @@
 						"exec": [
 							""
 						],
-						"type": "text/javascript"
+						"type": "text/javascript",
+						"packages": {}
 					}
 				}
 			],
@@ -274,10 +328,10 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n  \"doorId\": \"{{doorId}}\"\n}"
+					"raw": "{\n  \"keyId\": \"{{keyId}}\"\n}"
 				},
 				"url": {
-					"raw": "https://prod-api.lovit.ru/client-api/Device/OpenRelayByDoorId",
+					"raw": "https://prod-api.lovit.ru/client-api/Device/OpenRelayByKeyId",
 					"protocol": "https",
 					"host": [
 						"prod-api",
@@ -287,7 +341,7 @@
 					"path": [
 						"client-api",
 						"Device",
-						"OpenRelayByDoorId"
+						"OpenRelayByKeyId"
 					]
 				}
 			},
@@ -342,6 +396,11 @@
 		},
 		{
 			"key": "doorId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "keyId",
 			"value": "",
 			"type": "string"
 		}
