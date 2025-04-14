@@ -4,13 +4,15 @@ from datetime import datetime, timezone
 
 
 class IntercomAPI:
-    def __init__(self, base_url="https://prod-api.lovit.ru"):
+    def __init__(self, base_url="https://api.domonap.ru"):
         self.base_url = base_url
         self.access_token = None
         self.refresh_token = None
         self.refresh_expiration_date = None
         self.headers = {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "dom-app": "client",
+            "dom-platform": "blazor"
         }
         self.token_update_callback = None
 
