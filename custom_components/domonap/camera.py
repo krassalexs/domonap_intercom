@@ -43,7 +43,7 @@ class IntercomCamera(Camera):
 
     @property
     def name(self):
-        return "Camera"
+        return f"Камера {self._name}"
 
     async def async_camera_image(self, width=None, height=None):
         try:
