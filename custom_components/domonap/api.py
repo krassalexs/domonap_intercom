@@ -1,6 +1,9 @@
+import logging
 import aiohttp
 import asyncio
 from datetime import datetime, timezone
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class IntercomAPI:
@@ -11,7 +14,7 @@ class IntercomAPI:
         self.refresh_expiration_date = None
         self.headers = {
             "Content-Type": "application/json",
-            "dom-app": "client",
+            "dom-app": "mobile",
             "dom-platform": "blazor"
         }
         self.token_update_callback = None
@@ -22,11 +25,27 @@ class IntercomAPI:
         self.refresh_expiration_date = refresh_expiration_date
         self.headers["Authorization"] = f"Bearer {self.access_token}"
 
-    def check_token_expiration(self):
+    async def check_token_expiration(self):
         if self.refresh_expiration_date:
+            await self.update_device_token()
             expiration_date = datetime.strptime(self.refresh_expiration_date, "%Y-%m-%dT%H:%M:%S.%f%z")
             if datetime.now(timezone.utc) >= expiration_date:
-                asyncio.run(self.update_token())
+                await self.update_token()
+
+    async def update_device_token(self, device_token="home-assistant"):
+        _LOGGER.debug(f"Starting UpdateDeviceToken")
+        url = f"{self.base_url}/sso-api/Authorization/UpdateDeviceToken"
+        payload = {
+            "deviceToken": device_token
+        }
+        async with aiohttp.ClientSession(headers=self.headers) as session:
+            async with session.post(url, json=payload, ssl=False) as response:
+                if response.status == 200:
+                    return True
+                else:
+                    error_text = f"UpdateDeviceToken failed with status code {response.status}"
+                    _LOGGER.error(error_text)
+                    return {error_text}
 
     async def authorize(self, country_code, phone_number):
         url = f"{self.base_url}/sso-api/Authorization/Authorize"
@@ -96,7 +115,7 @@ class IntercomAPI:
                 return await response.json()
 
     async def get_user(self):
-        self.check_token_expiration()
+        await self.check_token_expiration()
         if not self.access_token:
             return {"error": "No access token available"}
         url = f"{self.base_url}/sso-api/User/GetUser"
@@ -105,13 +124,14 @@ class IntercomAPI:
                 return await response.json()
 
     async def get_paged_keys(self, per_page=100, current_page=1):
-        self.check_token_expiration()
+        await self.check_token_expiration()
         if not self.access_token:
             return {"error": "No access token available"}
         url = f"{self.base_url}/client-api/Key/GetPagedKeysByKeysType"
         payload = {
-            "PerPage": per_page,
-            "CurrentPage": current_page
+            "perPage": per_page,
+            "currentPage": current_page,
+            "keysType": "Main"  # "Active"
         }
         async with aiohttp.ClientSession(headers=self.headers) as session:
             async with session.post(url, json=payload, ssl=False) as response:
@@ -121,7 +141,7 @@ class IntercomAPI:
                     return {"error": f"Error load keys {response.status}"}
 
     async def get_user_key(self, key_id):
-        self.check_token_expiration()
+        await self.check_token_expiration()
         if not self.access_token:
             return {"error": "No access token available"}
         url = f"{self.base_url}/client-api/Key/GetUserKey"
@@ -133,7 +153,7 @@ class IntercomAPI:
                 return await response.json()
 
     async def open_relay_by_door_id(self, door_id):
-        self.check_token_expiration()
+        await self.check_token_expiration()
         if not self.access_token:
             return {"error": "No access token available"}
         url = f"{self.base_url}/client-api/Device/OpenRelayByDoorId"
@@ -142,10 +162,10 @@ class IntercomAPI:
         }
         async with aiohttp.ClientSession(headers=self.headers) as session:
             async with session.post(url, json=payload, ssl=False) as response:
-                return True
+                return await response.text()
 
     async def open_relay_by_key_id(self, key_id):
-        self.check_token_expiration()
+        await self.check_token_expiration()
         if not self.access_token:
             return {"error": "No access token available"}
         url = f"{self.base_url}/client-api/Device/OpenRelayByKeyId"
@@ -154,4 +174,4 @@ class IntercomAPI:
         }
         async with aiohttp.ClientSession(headers=self.headers) as session:
             async with session.post(url, json=payload, ssl=False) as response:
-                return True
+                return await response.text()

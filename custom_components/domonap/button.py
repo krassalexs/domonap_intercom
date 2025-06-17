@@ -50,7 +50,7 @@ class IntercomDoor(ButtonEntity):
     async def async_press(self):
         try:
             response = await self._api.open_relay_by_key_id(self._key_id)  # Ensure this is awaited
-            if response.get('status') is not True:
+            if response != "true":
                 _LOGGER.error(f"Failed to open the door {self._name}. Response: {response}")
         except Exception as e:
             _LOGGER.error(f"Error opening the door {self._name}: {e}")
