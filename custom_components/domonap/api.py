@@ -175,3 +175,50 @@ class IntercomAPI:
         async with aiohttp.ClientSession(headers=self.headers) as session:
             async with session.post(url, json=payload, ssl=False) as response:
                 return await response.text()
+
+    async def answer_call_notify(self, call_id):
+        _LOGGER.debug(f"Sending answer_call_notify to call_id: {call_id}")
+        await self.check_token_expiration()
+        if not self.access_token:
+            return {"error": "No access token available"}
+        url = f"{self.base_url}/communication-api/Call/NotifyCallAnswered"
+        payload = {
+            "callId": call_id
+        }
+        async with aiohttp.ClientSession(headers=self.headers) as session:
+            async with session.post(url, json=payload, ssl=False) as response:
+                result = await response.text()
+                _LOGGER.debug(f"result of answer_call_notify to call_id: {call_id} - {result}")
+                return result
+
+    async def end_call_notify(self, call_id):
+        _LOGGER.debug(f"Sending end_call_notify to call_id: {call_id}")
+        await self.check_token_expiration()
+        if not self.access_token:
+            return {"error": "No access token available"}
+        url = f"{self.base_url}/communication-api/Call/NotifyCallEnded"
+        payload = {
+            "callId": call_id
+        }
+        async with aiohttp.ClientSession(headers=self.headers) as session:
+            async with session.post(url, json=payload, ssl=False) as response:
+                result = await response.text()
+                _LOGGER.debug(f"result of end_call_notify to call_id: {call_id} - {result}")
+                return result
+
+    async def get_notify_id_token(self):
+        _LOGGER.debug(f"Getting notify_id_token")
+        await self.check_token_expiration()
+        if not self.access_token:
+            return {"error": "No access token available"}
+        url = f"{self.base_url}/notificationHub/negotiate?negotiateVersion=1"
+
+        async with aiohttp.ClientSession(headers=self.headers) as session:
+            async with session.post(url, ssl=False) as response:
+                data = await response.json()
+                if response.status == 200:
+                    _LOGGER.debug(f"Result is ok. Processing data... {data.get('connectionToken')}")
+                    return data.get('connectionToken')
+                else:
+                    _LOGGER.debug(f"Result is invalid.")
+                    return None
