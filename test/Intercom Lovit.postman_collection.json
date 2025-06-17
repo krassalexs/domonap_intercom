@@ -15,7 +15,8 @@
 						"exec": [
 							""
 						],
-						"type": "text/javascript"
+						"type": "text/javascript",
+						"packages": {}
 					}
 				}
 			],
@@ -26,6 +27,16 @@
 						"key": "Content-Type",
 						"value": "application/json",
 						"type": "text"
+					},
+					{
+						"key": "dom-app",
+						"value": "client",
+						"type": "text"
+					},
+					{
+						"key": "dom-platform",
+						"value": "blazor",
+						"type": "text"
 					}
 				],
 				"body": {
@@ -33,11 +44,11 @@
 					"raw": "{\n  \"phoneNumber\": {\n    \"countryCode\": 7,\n    \"number\": {{phoneNumber}}\n  }\n}"
 				},
 				"url": {
-					"raw": "https://prod-api.lovit.ru/sso-api/Authorization/Authorize",
+					"raw": "https://api.domonap.ru/sso-api/Authorization/Authorize",
 					"protocol": "https",
 					"host": [
-						"prod-api",
-						"lovit",
+						"api",
+						"domonap",
 						"ru"
 					],
 					"path": [
@@ -62,7 +73,8 @@
 							"pm.globals.set(\"refreshToken\", responseData.completeToken.refreshToken);",
 							"pm.globals.set(\"refreshExpirationDate\", responseData.completeToken.refreshExpirationDate);"
 						],
-						"type": "text/javascript"
+						"type": "text/javascript",
+						"packages": {}
 					}
 				}
 			],
@@ -78,6 +90,16 @@
 						"key": "Content-Type",
 						"value": "application/json",
 						"type": "text"
+					},
+					{
+						"key": "dom-app",
+						"value": "client",
+						"type": "text"
+					},
+					{
+						"key": "dom-platform",
+						"value": "blazor",
+						"type": "text"
 					}
 				],
 				"body": {
@@ -85,11 +107,11 @@
 					"raw": "{\n  \"phoneNumber\": {\n    \"countryCode\": 7,\n    \"number\": {{phoneNumber}}\n  },\n  \"confirmCode\": \"{{confirmCode}}\",\n  \"deviceToken\": \"home-assistant\"\n}"
 				},
 				"url": {
-					"raw": "https://prod-api.lovit.ru/sso-api/Authorization/ConfirmAuthorization",
+					"raw": "https://api.domonap.ru/sso-api/Authorization/ConfirmAuthorization",
 					"protocol": "https",
 					"host": [
-						"prod-api",
-						"lovit",
+						"api",
+						"domonap",
 						"ru"
 					],
 					"path": [
@@ -114,7 +136,8 @@
 							"pm.collectionVariables.set(\"refreshToken\", responseData.refreshToken);",
 							"pm.collectionVariables.set(\"refreshExpirationDate\", responseData.refreshExpirationDate);"
 						],
-						"type": "text/javascript"
+						"type": "text/javascript",
+						"packages": {}
 					}
 				}
 			],
@@ -130,6 +153,16 @@
 						"key": "Content-Type",
 						"value": "application/json",
 						"type": "text"
+					},
+					{
+						"key": "dom-app",
+						"value": "client",
+						"type": "text"
+					},
+					{
+						"key": "dom-platform",
+						"value": "blazor",
+						"type": "text"
 					}
 				],
 				"body": {
@@ -137,11 +170,11 @@
 					"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
 				},
 				"url": {
-					"raw": "https://prod-api.lovit.ru/sso-api/Authorization/RefreshToken",
+					"raw": "https://api.domonap.ru/sso-api/Authorization/RefreshToken",
 					"protocol": "https",
 					"host": [
-						"prod-api",
-						"lovit",
+						"api",
+						"domonap",
 						"ru"
 					],
 					"path": [
@@ -179,6 +212,16 @@
 						"key": "Content-Type",
 						"value": "application/json",
 						"type": "text"
+					},
+					{
+						"key": "dom-app",
+						"value": "client",
+						"type": "text"
+					},
+					{
+						"key": "dom-platform",
+						"value": "blazor",
+						"type": "text"
 					}
 				],
 				"body": {
@@ -186,11 +229,11 @@
 					"urlencoded": []
 				},
 				"url": {
-					"raw": "https://prod-api.lovit.ru/sso-api/User/GetUser",
+					"raw": "https://api.domonap.ru/sso-api/User/GetUser",
 					"protocol": "https",
 					"host": [
-						"prod-api",
-						"lovit",
+						"api",
+						"domonap",
 						"ru"
 					],
 					"path": [
@@ -211,7 +254,8 @@
 						"exec": [
 							""
 						],
-						"type": "text/javascript"
+						"type": "text/javascript",
+						"packages": {}
 					}
 				}
 			],
@@ -227,6 +271,16 @@
 						"key": "Content-Type",
 						"value": "application/json",
 						"type": "text"
+					},
+					{
+						"key": "client",
+						"value": "client",
+						"type": "text"
+					},
+					{
+						"key": "dom-platform",
+						"value": "blazor",
+						"type": "text"
 					}
 				],
 				"body": {
@@ -234,11 +288,11 @@
 					"raw": "{\n  \"PerPage\": 100,\n  \"CurrentPage\": 1\n}\n\n\n"
 				},
 				"url": {
-					"raw": "https://prod-api.lovit.ru/client-api/Key/GetPagedKeysByKeysType",
+					"raw": "https://api.domonap.ru/client-api/Key/GetPagedKeysByKeysType",
 					"protocol": "https",
 					"host": [
-						"prod-api",
-						"lovit",
+						"api",
+						"domonap",
 						"ru"
 					],
 					"path": [
@@ -259,7 +313,8 @@
 						"exec": [
 							""
 						],
-						"type": "text/javascript"
+						"type": "text/javascript",
+						"packages": {}
 					}
 				}
 			],
@@ -282,17 +337,27 @@
 					"raw": "{\n  \"keyId\": \"66ab67682474b7b320936dc9\"\n}"
 				},
 				"url": {
-					"raw": "https://prod-api.lovit.ru/client-api/Key/GetUserKey",
+					"raw": "https://api.domonap.ru/client-api/Key/GetUserKey?dom-app=client&dom-platform=blazor",
 					"protocol": "https",
 					"host": [
-						"prod-api",
-						"lovit",
+						"api",
+						"domonap",
 						"ru"
 					],
 					"path": [
 						"client-api",
 						"Key",
 						"GetUserKey"
+					],
+					"query": [
+						{
+							"key": "dom-app",
+							"value": "client"
+						},
+						{
+							"key": "dom-platform",
+							"value": "blazor"
+						}
 					]
 				}
 			},
@@ -324,6 +389,16 @@
 						"key": "Content-Type",
 						"value": "application/json",
 						"type": "text"
+					},
+					{
+						"key": "dom-app",
+						"value": "client",
+						"type": "text"
+					},
+					{
+						"key": "dom-platform",
+						"value": "blazor",
+						"type": "text"
 					}
 				],
 				"body": {
@@ -331,11 +406,11 @@
 					"raw": "{\n  \"keyId\": \"{{keyId}}\"\n}"
 				},
 				"url": {
-					"raw": "https://prod-api.lovit.ru/client-api/Device/OpenRelayByKeyId",
+					"raw": "https://api.domonap.ru/client-api/Device/OpenRelayByKeyId",
 					"protocol": "https",
 					"host": [
-						"prod-api",
-						"lovit",
+						"api",
+						"domonap",
 						"ru"
 					],
 					"path": [
@@ -391,11 +466,6 @@
 		},
 		{
 			"key": "confirmCode",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "doorId",
 			"value": "",
 			"type": "string"
 		},
