@@ -48,7 +48,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
-    return await hass.config_entries.async_forward_entry_unload(entry, Platform.BUTTON)
+    res = (await hass.config_entries.async_forward_entry_unload(entry, Platform.BUTTON) &
+           await hass.config_entries.async_forward_entry_unload(entry, Platform.CAMERA))
+    return res
 
 
 async def update_tokens(hass: HomeAssistant):
