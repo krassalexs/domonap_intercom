@@ -17,7 +17,7 @@ WS_HANDSHAKE_MESSAGE = '{"protocol": "json", "version": 1}' + WS_MESSAGE_END
 
 class IntercomNotifyClient:
     base_url = "wss://api.domonap.ru/notificationHub/?id="
-
+    photo_url = "https://s3-api.domonap.ru/snapshot/"
     def __init__(
             self, hass: HomeAssistant, api: IntercomAPI
     ) -> None:
@@ -42,6 +42,7 @@ class IntercomNotifyClient:
                 push_data = message_data.get('arguments')[2]
                 if push_data.get("EventMessage") == "DomofonCalling":
                     _LOGGER.debug(f"Incoming call {push_data}")
+                    push_data.update({'photoUrl': self.photo_url + push_data.get("CallId")})
                     self._hass.bus.fire("domonap_incoming_call", push_data)
                 else:
                     _LOGGER.debug(f"Unknown EventMessage type {push_data.get("EventMessage")} message:\n{message}")
