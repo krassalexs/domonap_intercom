@@ -93,8 +93,20 @@ class IntercomNotifyClient:
                                     _LOGGER.error(f"Error in processing {msg.data}")
                                     break
                                 await self.publish_updates()
+            except aiohttp.WSServerHandshakeError as error:
+                if error.status == 404:
+                    pass
+                elif error.status == 401:
+                    _LOGGER.error(f"Unauthorised connection. {error.headers.get('WWW-Authenticate')}")
+                    self.headers.update(
+                        {
+                            "Authorization": f"Bearer {self._api.access_token}"
+                        }
+                    )
+                else:
+                    _LOGGER.error(f"Unknown WSServer error connection. {error}")
             except Exception as error:
-                _LOGGER.debug(f'start_notify_listening error: {error}')
+                _LOGGER.debug(f'start_notify_listening unknown error: {error}')
             await asyncio.sleep(3)
 
     def register_callback(self, callback: Callable[[], None]) -> None:

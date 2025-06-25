@@ -27,6 +27,7 @@ class IntercomAPI:
 
     async def check_token_expiration(self):
         if self.refresh_expiration_date:
+            _LOGGER.debug(f"Expiration_date: {self.refresh_expiration_date}")
             await self.update_device_token()
             expiration_date = datetime.strptime(self.refresh_expiration_date, "%Y-%m-%dT%H:%M:%S.%f%z")
             if datetime.now(timezone.utc) >= expiration_date:
@@ -41,9 +42,14 @@ class IntercomAPI:
         async with aiohttp.ClientSession(headers=self.headers) as session:
             async with session.post(url, json=payload, ssl=False) as response:
                 if response.status == 200:
-                    return True
+                    _LOGGER.debug(f"UpdateDeviceToken alive. Continue...")
+                    return "true"
+                elif response.status == 401:
+                    _LOGGER.error(f"Unauthorized, beginning refresh token {response.headers.get('WWW-Authenticate')}")
+                    await self.update_token()
+                    return "false"
                 else:
-                    error_text = f"UpdateDeviceToken failed with status code {response.status}"
+                    error_text = f"UpdateDeviceToken failed with status code {response.status} data:\n{response}"
                     _LOGGER.error(error_text)
                     return {error_text}
 
@@ -96,8 +102,12 @@ class IntercomAPI:
         }
         async with aiohttp.ClientSession(headers=self.headers) as session:
             async with session.post(url, json=payload, ssl=False) as response:
+                _LOGGER.info(f"Beginning refreshToken. Old Expiration Date {self.refresh_expiration_date} - "
+                             f"today: {datetime.now(timezone.utc)}")
                 if response.status == 200:
                     data = await response.json()
+                    _LOGGER.info(f"New tokens successfully refreshed. "
+                                 f"New Expiration Date{data["refreshExpirationDate"]}")
                     self.set_tokens(
                         data["accessToken"],
                         data["refreshToken"],
