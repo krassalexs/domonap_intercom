@@ -81,7 +81,11 @@ class IntercomAPI:
         if not exp:
             return
         if self._now_utc() >= (exp - self.refresh_skew):
-            _LOGGER.info("Refreshing tokens (old refresh_expiration: %s, now: %s)", self.refresh_expiration_date, self._now_utc())
+            _LOGGER.info(
+                "Refreshing tokens (old refresh_expiration: %s, now: %s)",
+                self.refresh_expiration_date,
+                self._now_utc(),
+            )
             await self.update_token()
 
     async def _maybe_update_device_token(self) -> None:
@@ -211,7 +215,7 @@ class IntercomAPI:
             if self.token_update_callback:
                 self.token_update_callback(res["accessToken"], res["refreshToken"], res["refreshExpirationDate"])
             return {
-                "status": "success",
+                "ok": True,
                 "access_token": res["accessToken"],
                 "refresh_token": res["refreshToken"],
                 "refresh_expiration_date": res["refreshExpirationDate"],
@@ -236,14 +240,14 @@ class IntercomAPI:
         res = await self._post("/client-api/Device/OpenRelayByDoorId", payload, need_auth=True, expect="text")
         if isinstance(res, dict) and "error" in res:
             return res
-        return {"status": "success", "body": res}
+        return {"ok": True, "body": res}
 
     async def open_relay_by_key_id(self, key_id: str):
         payload = {"keyId": key_id}
         res = await self._post("/client-api/Device/OpenRelayByKeyId", payload, need_auth=True, expect="text")
         if isinstance(res, dict) and "error" in res:
             return res
-        return {"status": "success", "body": res}
+        return {"ok": True, "body": res}
 
     async def answer_call_notify(self, call_id: str):
         payload = {"callId": call_id}
@@ -251,7 +255,7 @@ class IntercomAPI:
         if isinstance(res, dict) and "error" in res:
             return res
         _LOGGER.debug("answer_call_notify(%s) -> %s", call_id, res)
-        return {"status": "success", "body": res}
+        return {"ok": True, "body": res}
 
     async def end_call_notify(self, call_id: str):
         payload = {"callId": call_id}
@@ -259,7 +263,7 @@ class IntercomAPI:
         if isinstance(res, dict) and "error" in res:
             return res
         _LOGGER.debug("end_call_notify(%s) -> %s", call_id, res)
-        return {"status": "success", "body": res}
+        return {"ok": True, "body": res}
 
     async def get_notify_id_token(self) -> Optional[str]:
         res = await self._post("/notificationHub/negotiate?negotiateVersion=1", need_auth=True, expect="json")
