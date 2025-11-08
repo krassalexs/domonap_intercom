@@ -22,6 +22,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class IntercomDoor(ButtonEntity):
     _attr_has_entity_name = True
     _attr_icon = "mdi:lock"
+    _attr_translation_key = "open_door"
 
     def __init__(self, api, key_id, door_id: str, name: str):
         self._api = api
@@ -32,10 +33,6 @@ class IntercomDoor(ButtonEntity):
     @property
     def unique_id(self):
         return self._door_id
-
-    @property
-    def name(self):
-        return "Open Door"
 
     @property
     def device_info(self):

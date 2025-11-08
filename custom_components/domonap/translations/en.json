@@ -21,5 +21,22 @@
         }
       }
     }
+  },
+  "entity": {
+    "button": {
+      "open_door": {
+        "name": "Open Door"
+      }
+    },
+    "binary_sensor": {
+      "incoming_call": {
+        "name": "Incoming Call"
+      }
+    },
+    "camera": {
+      "camera": {
+        "name": "Camera"
+      }
+    }
   }
 }

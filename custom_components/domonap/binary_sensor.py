@@ -34,7 +34,7 @@ class IntercomCallBinarySensor(BinarySensorEntity):
     _attr_has_entity_name = True
     _attr_icon = "mdi:phone-incoming"
     _attr_device_class = "running"
-    _attr_name = "Incoming Call"
+    _attr_translation_key = "incoming_call"
 
     def __init__(self, hass: HomeAssistant, api, key_id: str, door_id: str, name: str):
         self._hass = hass

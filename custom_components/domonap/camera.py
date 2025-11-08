@@ -25,9 +25,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 
 class IntercomCamera(Camera):
+    _attr_has_entity_name = True
     _attr_supported_features = CameraEntityFeature.STREAM
     _attr_frontend_stream_type = StreamType.HLS
     _attr_motion_detection_enabled = False
+    _attr_translation_key = "camera"
 
     def __init__(self, api, key_id: str, name: str, stream_url: str, snapshot_url: str):
         super().__init__()
@@ -40,10 +42,6 @@ class IntercomCamera(Camera):
     @property
     def unique_id(self):
         return self._key_id
-
-    @property
-    def name(self):
-        return "Camera"
 
     async def async_camera_image(self, width=None, height=None):
         try:
