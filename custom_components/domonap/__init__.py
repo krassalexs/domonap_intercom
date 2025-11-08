@@ -1,8 +1,6 @@
 import asyncio
 import logging
-from datetime import timedelta
 
-from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.event import async_track_time_interval
@@ -13,13 +11,12 @@ from .const import (
     PARAM_ACCESS_TOKEN,
     PARAM_REFRESH_TOKEN,
     PARAM_REFRESH_EXPIRATION,
+    PLATFORMS,
+    UPDATE_INTERVAL,
 )
 from .api import IntercomAPI
 
 _LOGGER = logging.getLogger(__name__)
-
-PLATFORMS: list[Platform] = [Platform.BUTTON, Platform.CAMERA, Platform.BINARY_SENSOR]
-UPDATE_INTERVAL = timedelta(hours=24)
 
 
 async def async_setup(hass: HomeAssistant, config: dict):

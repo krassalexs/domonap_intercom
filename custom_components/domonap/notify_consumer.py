@@ -6,14 +6,15 @@ from typing import Callable, Optional, Any, Iterable, Union
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .api import IntercomAPI
-from .const import EVENT_INCOMING_CALL
+from .const import (
+    EVENT_INCOMING_CALL,
+    WS_MESSAGE_END,
+    WS_HANDSHAKE_MESSAGE,
+    WS_URL,
+    PHOTO_URL,
+)
 
 _LOGGER = logging.getLogger(__name__)
-
-WS_MESSAGE_END = "\x1e"
-WS_HANDSHAKE_MESSAGE = '{"protocol":"json","version":1}' + WS_MESSAGE_END
-WS_URL = "wss://api.domonap.ru/notificationHub/?id="
-PHOTO_URL = "https://s3-api.domonap.ru/snapshot/"
 
 
 class IntercomNotifyConsumer:

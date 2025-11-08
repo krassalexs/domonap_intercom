@@ -3,11 +3,9 @@ from typing import Optional, Callable
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.event import async_call_later
-from .const import DOMAIN, API, EVENT_INCOMING_CALL
+from .const import DOMAIN, API, EVENT_INCOMING_CALL, RESET_DELAY
 
 _LOGGER = logging.getLogger(__name__)
-
-RESET_DELAY = 10  # секунды
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
