@@ -18,7 +18,7 @@ from .api import IntercomAPI
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.BUTTON, Platform.CAMERA]
+PLATFORMS: list[Platform] = [Platform.BUTTON, Platform.CAMERA, Platform.BINARY_SENSOR]
 UPDATE_INTERVAL = timedelta(hours=24)
 
 
