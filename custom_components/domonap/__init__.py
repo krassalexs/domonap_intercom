@@ -1,5 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import logging
+from datetime import timedelta, datetime
+from typing import TYPE_CHECKING
 
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
@@ -14,17 +18,24 @@ from .const import (
     PLATFORMS,
     UPDATE_INTERVAL,
 )
-from .api import IntercomAPI
+
+if TYPE_CHECKING:
+    from .api import IntercomAPI
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup(hass: HomeAssistant, config: dict):
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     hass.data.setdefault(DOMAIN, {})
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    from .api import IntercomAPI
+    from .notify_consumer import IntercomNotifyConsumer
+
+    hass.data[DOMAIN].setdefault(entry.entry_id, {})
+
     api = IntercomAPI()
     api.set_tokens(
         entry.data.get(PARAM_ACCESS_TOKEN),
@@ -32,14 +43,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         entry.data.get(PARAM_REFRESH_EXPIRATION),
     )
 
-    from .notify_consumer import IntercomNotifyConsumer
-
-    consumer = IntercomNotifyConsumer(hass, api)
-    hass.data[DOMAIN]["notify_consumer"] = consumer
-    entry.async_create_background_task(hass, consumer.start(), "domonap_notify")
-
-    def update_entry(access_token, refresh_token, refresh_expiration_date):
-        _LOGGER.debug("Updating entry with new tokens")
+    def update_entry(access_token: str, refresh_token: str, refresh_expiration_date: str) -> None:
+        _LOGGER.debug("Updating entry tokens in config_entry data")
         new_data = dict(entry.data)
         new_data.update(
             {
@@ -51,35 +56,44 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         hass.config_entries.async_update_entry(entry, data=new_data)
 
     api.token_update_callback = update_entry
-    hass.data[DOMAIN][API] = api
 
-    async_track_time_interval(hass, lambda now: update_tokens(hass), UPDATE_INTERVAL)
+    consumer = IntercomNotifyConsumer(hass, api)
+    hass.data[DOMAIN][entry.entry_id][API] = api
+    hass.data[DOMAIN][entry.entry_id]["notify_consumer"] = consumer
+
+    async def _update_tokens_tick(now: datetime) -> None:
+        try:
+            await api.update_token()
+        except Exception:
+            _LOGGER.debug("Token refresh failed", exc_info=True)
+
+    unsub_refresh = async_track_time_interval(hass, _update_tokens_tick, UPDATE_INTERVAL)
+    hass.data[DOMAIN][entry.entry_id]["unsub_refresh"] = unsub_refresh
+
+    entry.async_create_background_task(hass, consumer.start(), "domonap_notify")
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
-    consumer = hass.data[DOMAIN].pop("notify_consumer", None)
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    stored = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
+
+    if (unsub := stored.get("unsub_refresh")) is not None:
+        try:
+            unsub()
+        except Exception:
+            _LOGGER.debug("Error unsubscribing refresh timer", exc_info=True)
+
+    consumer = stored.get("notify_consumer")
     if consumer:
         try:
             await consumer.stop()
         except Exception:
             _LOGGER.debug("Exception while stopping notify consumer", exc_info=True)
 
-    results = await asyncio.gather(
-        *[
-            hass.config_entries.async_forward_entry_unload(entry, platform)
-            for platform in PLATFORMS
-        ],
-        return_exceptions=False,
-    )
-    return all(results)
+    unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
+    hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
 
-async def update_tokens(hass: HomeAssistant):
-    api: IntercomAPI = hass.data[DOMAIN][API]
-    try:
-        await api.update_token()
-    except Exception:
-        _LOGGER.debug("Token refresh failed", exc_info=True)
+    return unloaded

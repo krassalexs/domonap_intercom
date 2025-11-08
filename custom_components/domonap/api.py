@@ -1,148 +1,271 @@
-import json
 import logging
-import asyncio
 import aiohttp
-from typing import Callable, Optional, Any, Iterable, Union
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from .api import IntercomAPI
-from .const import (
-    EVENT_INCOMING_CALL,
-    WS_MESSAGE_END,
-    WS_HANDSHAKE_MESSAGE,
-    WS_URL,
-    PHOTO_URL,
-)
+import asyncio
+from datetime import datetime, timezone, timedelta
+from typing import Any, Dict, Optional, Union
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class IntercomNotifyConsumer:
-    def __init__(self, hass: HomeAssistant, api: IntercomAPI) -> None:
-        self._hass = hass
-        self._api = api
-        self._callbacks: set[Callable[[], Union[None, Any]]] = set()
-        self._notify_id_token: Optional[str] = None
-        self._connected: bool = False
-        self._reconnect_delay: float = 1.0
-        self._max_reconnect: float = 30.0
-        self._stop_event = asyncio.Event()
-        self._session = async_get_clientsession(hass)
-        self._headers = {"Authorization": f"Bearer {self._api.access_token or ''}"}
-        self._ws: Optional[aiohttp.ClientWebSocketResponse] = None
-        if hasattr(self._api, "token_update_callback") and self._api.token_update_callback is None:
-            self._api.token_update_callback = self._on_token_update
+class IntercomAPI:
+    def __init__(
+        self,
+        base_url: str = "https://api.domonap.ru",
+        device_token: str = "home-assistant",
+        device_token_check_interval: int = 300,
+        refresh_skew_seconds: int = 60,
+    ):
+        self.base_url = base_url.rstrip("/")
+        self.access_token: Optional[str] = None
+        self.refresh_token: Optional[str] = None
+        self.refresh_expiration_date: Optional[str] = None
+        self.device_token = device_token
+        self.device_token_check_interval = device_token_check_interval
+        self._last_device_token_check: Optional[datetime] = None
+        self._updating_device_token: bool = False
+        self.refresh_skew = timedelta(seconds=refresh_skew_seconds)
+        self.headers: Dict[str, str] = {
+            "Content-Type": "application/json",
+            "dom-app": "mobile",
+            "dom-platform": "blazor",
+        }
+        self.token_update_callback = None
+        self._session: Optional[aiohttp.ClientSession] = None
+        self._closed = False
 
-    async def start(self) -> None:
-        self._stop_event.clear()
-        while not self._stop_event.is_set():
+    async def _ensure_session(self) -> aiohttp.ClientSession:
+        if self._closed:
+            raise RuntimeError("Client is closed")
+        if not self._session or self._session.closed:
+            timeout = aiohttp.ClientTimeout(total=30)
+            self._session = aiohttp.ClientSession(headers=self.headers, timeout=timeout)
+        return self._session
+
+    async def close(self):
+        self._closed = True
+        if self._session and not self._session.closed:
+            await self._session.close()
+
+    async def __aenter__(self):
+        await self._ensure_session()
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        await self.close()
+
+    def set_tokens(self, access_token: str, refresh_token: str, refresh_expiration_date: str):
+        self.access_token = access_token
+        self.refresh_token = refresh_token
+        self.refresh_expiration_date = refresh_expiration_date
+        self.headers["Authorization"] = f"Bearer {self.access_token}"
+        if self._session and not self._session.closed:
+            self._session._default_headers.update(self.headers)
+
+    def _parse_dt(self, val: str) -> Optional[datetime]:
+        fmts = ("%Y-%m-%dT%H:%M:%S.%f%z", "%Y-%m-%dT%H:%M:%S%z")
+        for fmt in fmts:
             try:
-                await self._connect_and_run()
-            except asyncio.CancelledError:
-                raise
-            except aiohttp.WSServerHandshakeError as e:
-                if e.status == 401:
-                    _LOGGER.error("WS 401 Unauthorized: %s", e.headers.get("WWW-Authenticate"))
-                elif e.status == 404:
-                    _LOGGER.debug("WS 404 Not found")
-                else:
-                    _LOGGER.debug("WS handshake error: %s", e)
-            except Exception as e:
-                _LOGGER.debug("Notify loop error: %s", e)
-            if self._stop_event.is_set():
-                break
-            await asyncio.sleep(self._reconnect_delay)
-            self._reconnect_delay = min(self._reconnect_delay * 2, self._max_reconnect)
+                return datetime.strptime(val, fmt)
+            except ValueError:
+                continue
+        _LOGGER.warning("Cannot parse datetime: %s", val)
+        return None
 
-    async def stop(self) -> None:
-        self._stop_event.set()
-        if self._ws is not None and not self._ws.closed:
-            try:
-                await self._ws.close()
-            except Exception:
-                pass
+    def _now_utc(self) -> datetime:
+        return datetime.now(timezone.utc)
 
-    def register_callback(self, callback: Callable[[], Any]) -> None:
-        self._callbacks.add(callback)
-
-    def remove_callback(self, callback: Callable[[], Any]) -> None:
-        self._callbacks.discard(callback)
-
-    @property
-    def connected(self) -> bool:
-        return self._connected
-
-    def _on_token_update(self, access: str, _refresh: str, _exp: str) -> None:
-        self._headers["Authorization"] = f"Bearer {access}"
-
-    async def _connect_and_run(self) -> None:
-        self._notify_id_token = await self._api.get_notify_id_token()
-        _LOGGER.debug("Negotiated connectionToken: %s", self._notify_id_token)
-        if not self._notify_id_token:
-            raise RuntimeError("Negotiation failed: empty connectionToken")
-        ws_url = WS_URL + self._notify_id_token
-        async with self._session.ws_connect(ws_url, headers=self._headers) as ws:
-            self._ws = ws
-            _LOGGER.debug("WS connected")
-            self._connected = True
-            self._reconnect_delay = 1.0
-            await ws.send_str(WS_HANDSHAKE_MESSAGE)
-            async for msg in ws:
-                if self._stop_event.is_set():
-                    break
-                if msg.type == aiohttp.WSMsgType.TEXT:
-                    await self._handle_text(msg.data, ws)
-                    if self._callbacks:
-                        await self._publish_updates()
-                elif msg.type == aiohttp.WSMsgType.PING:
-                    await ws.pong()
-                elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
-                    _LOGGER.debug("WS closed/error: %s", msg.data)
-                    break
-        self._connected = False
-        self._ws = None
-        _LOGGER.debug("WS disconnected")
-
-    async def _handle_text(self, raw: str, ws: aiohttp.ClientWebSocketResponse) -> None:
-        payload = raw.rstrip(WS_MESSAGE_END)
-        if payload == "{}":
-            _LOGGER.debug("Handshake ack")
+    async def _maybe_refresh_token(self) -> None:
+        if not self.refresh_expiration_date:
             return
+        exp = self._parse_dt(self.refresh_expiration_date)
+        if not exp:
+            return
+        if self._now_utc() >= (exp - self.refresh_skew):
+            _LOGGER.info("Refreshing tokens (old refresh_expiration: %s, now: %s)", self.refresh_expiration_date, self._now_utc())
+            await self.update_token()
+
+    async def _maybe_update_device_token(self) -> None:
+        if self._updating_device_token:
+            return
+        now = self._now_utc()
+        if (
+            self._last_device_token_check is None
+            or (now - self._last_device_token_check).total_seconds() >= self.device_token_check_interval
+        ):
+            self._updating_device_token = True
+            try:
+                ok = await self.update_device_token(self.device_token)
+                self._last_device_token_check = now
+                if not ok:
+                    _LOGGER.debug("Device token not updated")
+            finally:
+                self._updating_device_token = False
+
+    async def _ensure_alive(self) -> None:
+        await self._maybe_refresh_token()
+        if self.access_token:
+            await self._maybe_update_device_token()
+
+    async def _post(
+        self,
+        path: str,
+        payload: Optional[Dict[str, Any]] = None,
+        *,
+        need_auth: bool = False,
+        expect: str = "json",
+        retry_on_401: bool = True,
+    ) -> Union[Dict[str, Any], str]:
+        if need_auth:
+            if not self.access_token:
+                return {"error": "No access token available", "status": 0, "body": ""}
+            await self._ensure_alive()
+
+        session = await self._ensure_session()
+        url = f"{self.base_url}{path}"
+
+        async def _do() -> aiohttp.ClientResponse:
+            return await session.post(url, json=payload, ssl=False)
+
+        resp = await _do()
+        if resp.status == 401 and retry_on_401 and self.refresh_token:
+            _LOGGER.warning("401 Unauthorized, refreshing token and retrying %s", path)
+            await self.update_token()
+            resp = await _do()
+
+        if 200 <= resp.status < 300:
+            if expect == "json":
+                return await resp.json()
+            return await resp.text()
+
+        body_text = ""
         try:
-            data = json.loads(payload)
-        except json.JSONDecodeError:
-            _LOGGER.debug("Non-JSON frame: %s", payload[:200])
-            return
-        t = data.get("type")
-        if t == 1:
-            await self._handle_invocation(data, ws)
-        elif t == 6:
-            await ws.send_str(payload + WS_MESSAGE_END)
-        elif t == 3:
-            _LOGGER.debug("Completion frame: %s", data)
-        else:
-            _LOGGER.debug("Unknown frame type=%s data=%s", t, payload[:200])
+            body_text = await resp.text()
+        except Exception:
+            pass
+        err = {"error": f"HTTP {resp.status}", "status": resp.status, "body": body_text[:2000]}
+        _LOGGER.error("Request failed: POST %s payload=%s -> %s", path, payload, err)
+        return err
 
-    async def _handle_invocation(self, data: dict, ws: aiohttp.ClientWebSocketResponse) -> None:
-        target = data.get("target")
-        args: Iterable = data.get("arguments") or []
-        if target == "ReceivePush":
-            push_data = args[2] if len(args) >= 3 else None
-            if isinstance(push_data, dict):
-                evt = push_data.get("EventMessage")
-                if evt == "DomofonCalling":
-                    push_data["photoUrl"] = PHOTO_URL + str(push_data.get("CallId", ""))
-                    self._hass.bus.fire(EVENT_INCOMING_CALL, push_data)
-                    _LOGGER.debug("Incoming call: %s", push_data)
-                else:
-                    _LOGGER.debug("Unknown EventMessage=%s push=%s", evt, str(push_data)[:200])
+    async def update_device_token(self, device_token: str) -> bool:
+        _LOGGER.debug("UpdateDeviceToken start")
+        result = await self._post(
+            "/sso-api/Authorization/UpdateDeviceToken",
+            {"deviceToken": device_token},
+            need_auth=False,
+            expect="text",
+            retry_on_401=True,
+        )
+        if isinstance(result, dict) and "error" in result:
+            _LOGGER.error("UpdateDeviceToken failed: %s", result)
+            return False
+        _LOGGER.debug("UpdateDeviceToken ok")
+        return True
 
-    async def _publish_updates(self) -> None:
-        for cb in list(self._callbacks):
-            try:
-                if asyncio.iscoroutinefunction(cb):
-                    await cb()  # type: ignore[misc]
-                else:
-                    cb()
-            except Exception as e:
-                _LOGGER.debug("Callback error: %s", e)
+    async def authorize(self, country_code: str, phone_number: str) -> Union[bool, Dict[str, Any]]:
+        payload = {"phoneNumber": {"countryCode": country_code, "number": phone_number}}
+        res = await self._post("/sso-api/Authorization/Authorize", payload, expect="text", need_auth=False)
+        if isinstance(res, dict) and "error" in res:
+            return {"error": f"Authorization failed: {res}"}
+        return True
+
+    async def confirm_authorization(
+        self,
+        country_code: str,
+        phone_number: str,
+        confirm_code: str,
+        device_token: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        payload = {
+            "phoneNumber": {"countryCode": country_code, "number": phone_number},
+            "confirmCode": confirm_code,
+            "deviceToken": device_token or self.device_token,
+        }
+        res = await self._post("/sso-api/Authorization/ConfirmAuthorization", payload, expect="json", need_auth=False)
+        if isinstance(res, dict) and "error" in res and "status" in res:
+            return res
+        try:
+            ct = res["completeToken"]
+            self.set_tokens(ct["accessToken"], ct["refreshToken"], ct["refreshExpirationDate"])
+            if self.token_update_callback:
+                self.token_update_callback(ct["accessToken"], ct["refreshToken"], ct["refreshExpirationDate"])
+        except Exception as e:
+            _LOGGER.exception("Unexpected response on confirm_authorization: %s", e)
+        return res
+
+    async def update_token(self) -> Dict[str, Any]:
+        if not self.refresh_token:
+            return {"error": "No refresh token available", "status": 0, "body": ""}
+        _LOGGER.info("Begin refreshToken. Old refresh_expiration=%s now=%s", self.refresh_expiration_date, self._now_utc())
+        res = await self._post(
+            "/sso-api/Authorization/RefreshToken",
+            {"refreshToken": self.refresh_token},
+            expect="json",
+            need_auth=False,
+            retry_on_401=False,
+        )
+        if isinstance(res, dict) and "error" in res and "status" in res:
+            return res
+        try:
+            self.set_tokens(res["accessToken"], res["refreshToken"], res["refreshExpirationDate"])
+            _LOGGER.info("Tokens refreshed. New refresh_expiration=%s", res["refreshExpirationDate"])
+            if self.token_update_callback:
+                self.token_update_callback(res["accessToken"], res["refreshToken"], res["refreshExpirationDate"])
+            return {
+                "status": "success",
+                "access_token": res["accessToken"],
+                "refresh_token": res["refreshToken"],
+                "refresh_expiration_date": res["refreshExpirationDate"],
+            }
+        except Exception as e:
+            _LOGGER.exception("Unexpected refresh response: %s", e)
+            return {"error": "Unexpected refresh response format", "status": 0, "body": str(res)}
+
+    async def get_user(self) -> Union[Dict[str, Any], str]:
+        return await self._post("/sso-api/User/GetUser", need_auth=True, expect="json")
+
+    async def get_paged_keys(self, per_page: int = 100, current_page: int = 1, keys_type: str = "Main"):
+        payload = {"perPage": per_page, "currentPage": current_page, "keysType": keys_type}
+        return await self._post("/client-api/Key/GetPagedKeysByKeysType", payload, need_auth=True, expect="json")
+
+    async def get_user_key(self, key_id: str):
+        payload = {"keyId": key_id}
+        return await self._post("/client-api/Key/GetUserKey", payload, need_auth=True, expect="json")
+
+    async def open_relay_by_door_id(self, door_id: str):
+        payload = {"doorId": door_id}
+        res = await self._post("/client-api/Device/OpenRelayByDoorId", payload, need_auth=True, expect="text")
+        if isinstance(res, dict) and "error" in res:
+            return res
+        return {"status": "success", "body": res}
+
+    async def open_relay_by_key_id(self, key_id: str):
+        payload = {"keyId": key_id}
+        res = await self._post("/client-api/Device/OpenRelayByKeyId", payload, need_auth=True, expect="text")
+        if isinstance(res, dict) and "error" in res:
+            return res
+        return {"status": "success", "body": res}
+
+    async def answer_call_notify(self, call_id: str):
+        payload = {"callId": call_id}
+        res = await self._post("/communication-api/Call/NotifyCallAnswered", payload, need_auth=True, expect="text")
+        if isinstance(res, dict) and "error" in res:
+            return res
+        _LOGGER.debug("answer_call_notify(%s) -> %s", call_id, res)
+        return {"status": "success", "body": res}
+
+    async def end_call_notify(self, call_id: str):
+        payload = {"callId": call_id}
+        res = await self._post("/communication-api/Call/NotifyCallEnded", payload, need_auth=True, expect="text")
+        if isinstance(res, dict) and "error" in res:
+            return res
+        _LOGGER.debug("end_call_notify(%s) -> %s", call_id, res)
+        return {"status": "success", "body": res}
+
+    async def get_notify_id_token(self) -> Optional[str]:
+        res = await self._post("/notificationHub/negotiate?negotiateVersion=1", need_auth=True, expect="json")
+        if isinstance(res, dict) and "error" in res and "status" in res:
+            _LOGGER.debug("negotiate failed: %s", res)
+            return None
+        token = res.get("connectionToken")
+        _LOGGER.debug("get_notify_id_token -> %s", token)
+        return token

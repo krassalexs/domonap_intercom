@@ -7,7 +7,7 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     entities = []
-    api = hass.data[DOMAIN][API]
+    api = hass.data[DOMAIN][config_entry.entry_id][API]
     response = await api.get_paged_keys()
     keys = response.get("results", [])
     for key in keys:
@@ -46,7 +46,7 @@ class IntercomDoor(ButtonEntity):
 
     async def async_press(self):
         try:
-            response = await self._api.open_relay_by_key_id(self._key_id)  # Ensure this is awaited
+            response = await self._api.open_relay_by_key_id(self._key_id)
             if response.get('ok') is not True:
                 _LOGGER.error(f"Failed to open the door {self._name}. Response: {response}")
         except Exception as e:

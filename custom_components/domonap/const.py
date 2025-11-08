@@ -16,14 +16,11 @@ PARAM_REFRESH_TOKEN = "refresh_token"
 PARAM_REFRESH_EXPIRATION = "refresh_expiration_date"
 EVENT_INCOMING_CALL = "domonap_incoming_call"
 
-# Платформы
 PLATFORMS: list[Platform] = [Platform.BUTTON, Platform.CAMERA, Platform.BINARY_SENSOR]
 
-# Интервалы обновления
 UPDATE_INTERVAL = timedelta(hours=24)
-RESET_DELAY = 10  # секунды
+RESET_DELAY = 10 # секунды
 
-# WebSocket константы
 WS_MESSAGE_END = "\x1e"
 WS_HANDSHAKE_MESSAGE = '{"protocol":"json","version":1}' + WS_MESSAGE_END
 WS_URL = "wss://api.domonap.ru/notificationHub/?id="

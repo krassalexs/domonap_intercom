@@ -11,7 +11,7 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Настройка binary sensor для каждой двери."""
     entities = []
-    api = hass.data[DOMAIN][API]
+    api = hass.data[DOMAIN][config_entry.entry_id][API]
     response = await api.get_paged_keys()
     keys = response.get("results", [])
     
@@ -19,7 +19,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         key_id = key["id"]
         door_id = key["doorId"]
         door_name = key["name"]
-        # Создаем sensor только для дверей с httpVideoUrl
         if key.get("httpVideoUrl") is not None:
             entities.append(IntercomCallBinarySensor(hass, api, key_id, door_id, door_name))
 
@@ -64,17 +63,14 @@ class IntercomCallBinarySensor(BinarySensorEntity):
 
     async def async_added_to_hass(self):
         """Вызывается когда entity добавлен в Home Assistant."""
-        # Подписываемся на событие входящего звонка
         self._listener = self._hass.bus.async_listen(
             EVENT_INCOMING_CALL, self._handle_incoming_call
         )
 
     async def async_will_remove_from_hass(self):
         """Вызывается когда entity удаляется из Home Assistant."""
-        # Отписываемся от события
         if self._listener:
             self._listener()
-        # Отменяем таймер если он активен
         if self._reset_timer:
             self._reset_timer()
             self._reset_timer = None
@@ -87,15 +83,12 @@ class IntercomCallBinarySensor(BinarySensorEntity):
             _LOGGER.debug(
                 "Incoming call detected for door %s (%s)", self._door_id, self._name
             )
-            # Устанавливаем состояние в True
             self._state = True
             self.async_write_ha_state()
             
-            # Отменяем предыдущий таймер если он был
             if self._reset_timer:
                 self._reset_timer()
             
-            # Устанавливаем таймер на сброс через 10 секунд
             self._reset_timer = async_call_later(
                 self._hass, RESET_DELAY, self._reset_state
             )
