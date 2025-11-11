@@ -31,7 +31,7 @@ automation:
         data:
           message: "Входящий звонок на домофон"
           data:
-            image: "{{ trigger.event.data.photoUrl }}"
+            image: "{{ trigger.event.data.PhotoUrl }}"
 ```
 
 ## Ограничения
