@@ -41,7 +41,12 @@
     "camera": {
       "camera": {
         "name": "Camera"
+      },
+      "image": {
+      "incoming_call_image": {
+        "name": "Call photo"
       }
+    }
     }
   }
 }

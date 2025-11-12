@@ -42,6 +42,11 @@
       "camera": {
         "name": "Камера"
       }
+    },
+    "image": {
+      "incoming_call_image": {
+        "name": "Фото звонка"
+      }
     }
   }
 }
