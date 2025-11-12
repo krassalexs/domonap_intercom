@@ -33,6 +33,11 @@
         "name": "Incoming Call"
       }
     },
+    "sensor": {
+      "door_code": {
+        "name": "Door Code"
+      }
+    },
     "camera": {
       "camera": {
         "name": "Camera"

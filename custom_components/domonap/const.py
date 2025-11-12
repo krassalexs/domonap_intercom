@@ -16,7 +16,7 @@ PARAM_REFRESH_TOKEN = "refresh_token"
 PARAM_REFRESH_EXPIRATION = "refresh_expiration_date"
 EVENT_INCOMING_CALL = "domonap_incoming_call"
 
-PLATFORMS: list[Platform] = [Platform.BUTTON, Platform.CAMERA, Platform.BINARY_SENSOR]
+PLATFORMS: list[Platform] = [Platform.BUTTON, Platform.CAMERA, Platform.BINARY_SENSOR, Platform.SENSOR]
 
 UPDATE_INTERVAL = timedelta(hours=24)
 RESET_DELAY = 10 # секунды
