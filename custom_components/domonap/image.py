@@ -7,6 +7,7 @@ from homeassistant.components.image import ImageEntity
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, API, EVENT_INCOMING_CALL
 
@@ -14,7 +15,6 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities):
-    """Создаём image-entity для каждой двери; картинка обновляется при звонке из PhotoUrl."""
     entities: list[IntercomCallImageEntity] = []
     api = hass.data[DOMAIN][config_entry.entry_id][API]
 
@@ -35,7 +35,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
                     api=api,
                     key_id=key_id,
                     door_id=door_id,
-                    name=door_name,
+                    device_name=door_name,
                     photo_url=photo_url,
                 )
             )
@@ -44,8 +44,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
 
 
 class IntercomCallImageEntity(ImageEntity):
-    """Image-entity, показывающая последнюю картинку звонящего."""
-
     _attr_has_entity_name = True
     _attr_translation_key = "incoming_call_image"
     _attr_content_type = "image/jpeg"
@@ -56,15 +54,16 @@ class IntercomCallImageEntity(ImageEntity):
         api,
         key_id: str,
         door_id: str,
-        name: str,
+        device_name: str,
         photo_url: Optional[str] = None,
     ):
         super().__init__(hass)
         self._api = api
         self._key_id = key_id
         self._door_id = door_id
-        self._attr_name = name
+        self._device_name = device_name
         self._photo_url = photo_url
+        self._image_bytes: Optional[bytes] = None
         self._unsub: Optional[Callable[[], None]] = None
 
     @property
@@ -75,7 +74,7 @@ class IntercomCallImageEntity(ImageEntity):
     def device_info(self):
         return {
             "identifiers": {(DOMAIN, self._key_id)},
-            "name": self._attr_name,
+            "name": self._device_name,
             "manufacturer": "Domonap",
             "model": "Intercom Device",
         }
@@ -88,16 +87,18 @@ class IntercomCallImageEntity(ImageEntity):
         if self._photo_url:
             data = await self._http_get_bytes(self._photo_url)
             if data:
-                await self.async_set_image(data)
+                await self._set_image(data)
 
     async def async_will_remove_from_hass(self) -> None:
         if self._unsub:
             self._unsub()
             self._unsub = None
 
+    async def async_image(self) -> bytes | None:
+        return self._image_bytes
+
     @callback
     def _handle_incoming_call(self, event) -> None:
-        """Обновляем картинку при звонке по новому PhotoUrl (строго из поля PhotoUrl)."""
         if event.data.get("DoorId") != self._door_id:
             return
 
@@ -108,9 +109,14 @@ class IntercomCallImageEntity(ImageEntity):
         async def _fetch_and_set():
             data = await self._http_get_bytes(photo_url)
             if data:
-                await self.async_set_image(data)
+                await self._set_image(data)
 
         self.hass.async_create_task(_fetch_and_set())
+
+    async def _set_image(self, data: bytes) -> None:
+        self._image_bytes = data
+        self._attr_image_last_updated = dt_util.utcnow()
+        self.async_write_ha_state()
 
     async def _http_get_bytes(self, url: str) -> Optional[bytes]:
         session = async_get_clientsession(self.hass)
