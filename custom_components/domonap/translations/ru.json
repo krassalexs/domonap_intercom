@@ -21,5 +21,17 @@
         }
       }
     }
+  },
+  "entity": {
+    "button": {
+      "open_door": {
+        "name": "Открыть дверь"
+      }
+    },
+    "sensor": {
+      "door_code": {
+        "name": "Код двери"
+      }
+    }
   }
 }
