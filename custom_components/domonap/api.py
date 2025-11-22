@@ -131,7 +131,18 @@ class IntercomAPI:
         url = f"{self.base_url}/sso-api/User/GetUser"
         async with aiohttp.ClientSession(headers=self.headers) as session:
             async with session.post(url, ssl=False) as response:
-                return await response.json()
+                data = await response.json()
+                if response.status == 200:
+                    _LOGGER.debug(f"Result is ok. Processing data... {data}")
+                    return data
+                else:
+                    _LOGGER.debug(f"Result is invalid.")
+                    return None
+
+    async def get_username(self):
+        user = await self.get_user()
+        if user:
+            return user.get("userProfile").get("username")
 
     async def get_paged_keys(self, per_page=100, current_page=1):
         await self.check_token_expiration()

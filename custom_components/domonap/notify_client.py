@@ -13,7 +13,8 @@ _LOGGER = logging.getLogger(__name__)
 
 WS_MESSAGE_END = ''
 WS_HANDSHAKE_MESSAGE = '{"protocol": "json", "version": 1}' + WS_MESSAGE_END
-
+WS_USER_ONLINE_MESSAGE = ('{"invocationId":"1","arguments":[true],"type":1,"streamIds":[],"target":"SetOnlineStatus"}'
+                          + WS_MESSAGE_END)
 
 class IntercomNotifyClient:
     base_url = "wss://api.domonap.ru/notificationHub/?id="
@@ -26,6 +27,7 @@ class IntercomNotifyClient:
         self._callbacks = set()
         self._notify_id_token = None
         self._id = ''
+        self._username = ''
         self._api = api
         self._connected = False
         self.headers = {
@@ -36,7 +38,9 @@ class IntercomNotifyClient:
     async def message_callback(self, message, ws):
         message_data = json.loads(message)
         if message == "{}":
-            _LOGGER.debug(f"Handshake successful")
+            await ws.send_str(WS_USER_ONLINE_MESSAGE)
+            self._username = await self._api.get_username()
+            _LOGGER.debug(f"Handshake successful. Username: {self._username}")
         elif message_data.get('type') == 1:
             if message_data.get('target') == 'ReceivePush':
                 push_data = message_data.get('arguments')[2]
@@ -48,12 +52,18 @@ class IntercomNotifyClient:
                     _LOGGER.debug(f"Unknown EventMessage type {push_data.get("EventMessage")} message:\n{message}")
 
             elif message_data.get('target') in ('ReceiveOnline', "ReceiveOffline"):
-                _LOGGER.debug(f"User {message_data.get('arguments')[0]} is "
-                              f"{message_data.get('target').replace('ReceiveO', 'o')}")
+                user = message_data.get('arguments')[0]
+                status = message_data.get('target').replace('ReceiveO', 'o')
+
+                _LOGGER.debug(f"User {user} is {status}")
+
                 self._hass.bus.fire("domonap_user_status_changed", {
-                    'user': message_data.get('arguments')[0],
-                    'status': message_data.get('target').replace('ReceiveO', 'o')
+                    'user': user,
+                    'status': status
                 })
+
+                if user == self._username and status == "offline":
+                    await ws.send_str(WS_USER_ONLINE_MESSAGE)
             elif message_data.get('target') == "ReceiveMessage":
                 chat_data = message_data.get('arguments')[0]
                 self._hass.bus.fire("domonap_receive_message", chat_data)
