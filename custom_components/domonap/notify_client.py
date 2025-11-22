@@ -13,7 +13,8 @@ _LOGGER = logging.getLogger(__name__)
 
 WS_MESSAGE_END = ''
 WS_HANDSHAKE_MESSAGE = '{"protocol": "json", "version": 1}' + WS_MESSAGE_END
-
+WS_USER_ONLINE_MESSAGE = ('{"invocationId":"1","arguments":[true],"type":1,"streamIds":[],"target":"SetOnlineStatus"}'
+                          + WS_MESSAGE_END)
 
 class IntercomNotifyClient:
     base_url = "wss://api.domonap.ru/notificationHub/?id="
@@ -36,6 +37,7 @@ class IntercomNotifyClient:
     async def message_callback(self, message, ws):
         message_data = json.loads(message)
         if message == "{}":
+            await ws.send_str(WS_USER_ONLINE_MESSAGE)
             _LOGGER.debug(f"Handshake successful")
         elif message_data.get('type') == 1:
             if message_data.get('target') == 'ReceivePush':
