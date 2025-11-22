@@ -37,6 +37,10 @@ class IntercomCamera(Camera):
         self._stream_url = stream_url
         self._snapshot_url = snapshot_url
 
+        self._attr_extra_state_attributes = {
+            "stream_url_url": stream_url,
+        }
+
     @property
     def unique_id(self):
         return self._key_id
@@ -44,6 +48,10 @@ class IntercomCamera(Camera):
     @property
     def name(self):
         return f"Камера {self._name}"
+
+    @property
+    def extra_state_attributes(self):
+        return self._attr_extra_state_attributes
 
     async def async_camera_image(self, width=None, height=None):
         try:
