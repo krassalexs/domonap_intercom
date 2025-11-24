@@ -24,6 +24,7 @@ class IntercomNotifyConsumer:
         self._callbacks: set[Callable[[], Union[None, Any]]] = set()
         self._notify_id_token: Optional[str] = None
         self._connected: bool = False
+        self._username: str = ""
         self._reconnect_delay: float = 1.0
         self._max_reconnect: float = 30.0
         self._stop_event = asyncio.Event()
@@ -86,6 +87,7 @@ class IntercomNotifyConsumer:
             _LOGGER.debug("WS connected")
             self._connected = True
             self._reconnect_delay = 1.0
+            self._username = await self._api.get_username()
             await ws.send_str(WS_HANDSHAKE_MESSAGE)
             async for msg in ws:
                 if self._stop_event.is_set():
@@ -100,6 +102,7 @@ class IntercomNotifyConsumer:
                     _LOGGER.debug("WS closed/error: %s", msg.data)
                     break
         self._connected = False
+        self._username = ""
         self._ws = None
         _LOGGER.debug("WS disconnected")
 
@@ -136,6 +139,23 @@ class IntercomNotifyConsumer:
                     _LOGGER.debug("Incoming call: %s", push_data)
                 else:
                     _LOGGER.debug("Unknown EventMessage=%s push=%s", evt, str(push_data)[:200])
+        elif target in ('ReceiveOnline', "ReceiveOffline"):
+            user = data.get('arguments')[0]
+            status = data.get('target').replace('ReceiveO', 'o')
+
+            _LOGGER.debug(f"User {user} is {status}")
+
+            self._hass.bus.fire("domonap_user_status_changed", {
+                'user': user,
+                'status': status
+            })
+
+            # Обработка ситуации когда под одним аккаунтом выполнен вход (реакция на выход) в приложение
+            # После события offline на все сессии текущего пользователя перестают приходить уведомления о звонках
+            if user == self._username and status == "offline":
+                _LOGGER.debug(f"Current login user: {user} status changed to {status}. Reconnecting websocket...")
+                await self.stop()
+                await self.start()
 
     async def _publish_updates(self) -> None:
         for cb in list(self._callbacks):
