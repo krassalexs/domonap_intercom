@@ -9,6 +9,11 @@ files:
   - custom_components/domonap/consts.py
   - custom_components/domonap/config_flow.py
   - custom_components/domonap/button.py
+  - custom_components/domonap/camera.py
+  - custom_components/domonap/notify_consumer.py
+  - custom_components/domonap/binary_sensor.py
+  - custom_components/domonap/sensor.py
+  - custom_components/domonap/image.py
 keywords:
   - domonap
   - intercom
