@@ -2,6 +2,7 @@ import json
 import logging
 import asyncio
 import aiohttp
+from random import randint
 from typing import Callable, Optional, Any, Iterable, Union
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -25,8 +26,8 @@ class IntercomNotifyConsumer:
         self._notify_id_token: Optional[str] = None
         self._connected: bool = False
         self._username: str = ""
-        self._reconnect_delay: float = 1.0
-        self._max_reconnect: float = 30.0
+        self._reconnect_delay: int = 1
+        self._max_reconnect: int = 10
         self._stop_event = asyncio.Event()
         self._session = async_get_clientsession(hass)
         self._headers = {"Authorization": f"Bearer {self._api.access_token or ''}"}
@@ -53,7 +54,7 @@ class IntercomNotifyConsumer:
             if self._stop_event.is_set():
                 break
             await asyncio.sleep(self._reconnect_delay)
-            self._reconnect_delay = min(self._reconnect_delay * 2, self._max_reconnect)
+            self._reconnect_delay = randint(self._reconnect_delay, self._max_reconnect)
 
     async def stop(self) -> None:
         self._stop_event.set()
@@ -86,7 +87,7 @@ class IntercomNotifyConsumer:
             self._ws = ws
             _LOGGER.debug("WS connected")
             self._connected = True
-            self._reconnect_delay = 1.0
+            self._reconnect_delay = 1
             self._username = await self._api.get_username()
             await ws.send_str(WS_HANDSHAKE_MESSAGE)
             async for msg in ws:
@@ -156,6 +157,15 @@ class IntercomNotifyConsumer:
                 _LOGGER.debug(f"Current login user: {user} status changed to {status}. Reconnecting websocket...")
                 await self.stop()
                 await self.start()
+
+        elif target == "ReceiveMessage":
+            chat_data = data.get('arguments')[0]
+            self._hass.bus.fire("domonap_receive_message", chat_data)
+            _LOGGER.debug(f"Received message from {chat_data.get('sender')}: {chat_data.get('text')}")
+        elif target == 'ReceiveRead':
+            _LOGGER.debug(f"Read confirm messages in channel {data.get('arguments')[0]}")
+        else:
+            _LOGGER.debug(f"Unknown target type {data.get('target')} message:\n{data}")
 
     async def _publish_updates(self) -> None:
         for cb in list(self._callbacks):
