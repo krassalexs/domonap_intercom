@@ -9,7 +9,7 @@ from .api import IntercomAPI
 from .notify_client import IntercomNotifyClient
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = [Platform.BUTTON, Platform.CAMERA]
+PLATFORMS = [Platform.BUTTON, Platform.CAMERA, Platform.SENSOR]
 UPDATE_INTERVAL = timedelta(hours=24)  # интервал обновления токенов
 
 
@@ -48,8 +48,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
-    res = (await hass.config_entries.async_forward_entry_unload(entry, Platform.BUTTON) &
-           await hass.config_entries.async_forward_entry_unload(entry, Platform.CAMERA))
+    res = (
+            await hass.config_entries.async_forward_entry_unload(entry, Platform.BUTTON) &
+            await hass.config_entries.async_forward_entry_unload(entry, Platform.CAMERA) &
+            await hass.config_entries.async_forward_entry_unload(entry, Platform.SENSOR)
+           )
     return res
 
 

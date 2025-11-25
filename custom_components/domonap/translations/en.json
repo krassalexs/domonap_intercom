@@ -21,5 +21,17 @@
         }
       }
     }
+  },
+  "entity": {
+    "button": {
+      "open_door": {
+        "name": "Open Door"
+      }
+    },
+    "sensor": {
+      "door_code": {
+        "name": "Door Code"
+      }
+    }
   }
 }
