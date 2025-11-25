@@ -223,6 +223,11 @@ class IntercomAPI:
     async def get_user(self) -> Union[Dict[str, Any], str]:
         return await self._post("/sso-api/User/GetUser", need_auth=True, expect="json")
 
+    async def get_username(self):
+        user = await self.get_user()
+        if user:
+            return user.get("userProfile").get("username")
+
     async def get_paged_keys(self, per_page: int = 100, current_page: int = 1, keys_type: str = "Main"):
         payload = {"perPage": per_page, "currentPage": current_page, "keysType": keys_type}
         return await self._post("/client-api/Key/GetPagedKeysByKeysType", payload, need_auth=True, expect="json")
